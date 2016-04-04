@@ -11,6 +11,7 @@ endforeach()
 
 option(BENCHMARK_ENABLE_TESTING "Enable testing of the benchmark library." ON)
 option(BENCHMARK_ENABLE_LTO "Enable link time optimisation of the benchmark library." OFF)
+option(BENCHMARK_STATIC_MSVC_RUNTIME "Statically linking to MSVC runtime." OFF)
 # Make sure we can import out CMake functions
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -35,13 +36,28 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   # Turn compiler warnings up to 11
   add_cxx_compiler_flag(-W4)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-
+  # Static MSVC runtime
+  if (BENCHMARK_STATIC_MSVC_RUNTIME)
+    foreach(flag_var
+      CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
+      CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO
+      CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
+      CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+      if(${flag_var} MATCHES "/MD")
+        string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
+      endif()
+      if(${flag_var} MATCHES "/MDd")
+        string(REGEX REPLACE "/MDd" "/MTd" ${flag_var} "${${flag_var}}")
+      endif()
+    endforeach(flag_var)
+    add_definitions(-D_STATIC_MSVC_RUNTIME)
+  endif()
   # Link time optimisation
   if (BENCHMARK_ENABLE_LTO)
-    set(CMAKE_CXX_FLAGS_RELEASE "/GL")
-    set(CMAKE_STATIC_LINKER_FLAGS_RELEASE "/LTCG")
-    set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "/LTCG")
-    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "/LTCG")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /GL")
+    set(CMAKE_STATIC_LINKER_FLAGS_RELEASE "${CMAKE_STATIC_LINKER_FLAGS_RELEASE} /LTCG")
+    set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /LTCG")
+    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /LTCG")
   endif()
 else()
   # Try and enable C++11. Don't use C++14 because it doesn't work in some

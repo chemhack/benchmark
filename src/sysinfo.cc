@@ -17,6 +17,9 @@
 
 #ifdef BENCHMARK_OS_WINDOWS
 #include <Shlwapi.h>
+#ifdef _STATIC_MSVC_RUNTIME
+#pragma comment(lib,"Shlwapi.lib")
+#endif
 #include <Windows.h>
 #include <VersionHelpers.h>
 #else
